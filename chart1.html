@@ -33,7 +33,7 @@
             const path = d3.geoPath(); // TODO: Complete
             const projection = d3
                 .geoAlbersUsa()
-                .scale(1280)
+                .scale(1270)
                 .translate([480, 300]);
 
             const citiesSalaries = new Map();
@@ -150,12 +150,14 @@
                         .attr("stroke", "lightgray")
                         .attr("d", path);
 
-                    /** svg.append("g")
+                    svg.append("g")
                         .attr("class", "counties")
                         .selectAll("path")
                         .data(topojson.feature(us, us.objects.counties).features)
                         .enter().append("path")
-                        .attr("d", path); **/
+                        .attr("fill", "white")
+                        .attr("stroke", "lightgray")
+                        .attr("d", path);
 
                     /**
                     svg.append("path")
@@ -179,13 +181,24 @@
                         // Append a circle for each city
                         value.salaries.sort((a, b) => a - b);
                         value.salaries.forEach(salary => {
+                            // Generate a random angle between 0 and 2 * PI for the direction
+                            const angle = Math.random() * 2 * Math.PI;
+
+                            // Generate a distance with bias towards the center (closer to centroid)
+                            const maxDrift = value.landArea / usSqMiles * 50000;
+                            const distance = Math.random() ** 2 * maxDrift; // Squared to bias toward shorter distances
+
+                            // Calculate the drift in x and y directions using the angle
+                            const driftX = Math.cos(angle) * distance;
+                            const driftY = Math.sin(angle) * distance;
 
                             svg.append("circle")
                                 .attr("class", "salary-point")
-                                .attr("cx", x)
-                                .attr("cy", y)
-                                .attr("r", 2)
+                                .attr("cx", x + driftX)
+                                .attr("cy", y + driftY)
+                                .attr("r", 1.5)
                                 .attr("fill", colorScale(salary))
+                                .attr("opacity", 0.5)
                                 .text(`${cityJson.city}, ${cityJson.state}: ${value.salaries.join(", ")}`)
                         });
                     });
