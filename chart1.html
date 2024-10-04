@@ -3,35 +3,172 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>MS2</title>
+    <!-- TODO: Add note of choropleth map -->
+    <title>US Location vs Tech Salary</title>
 
     <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Raleway:400,700" rel="stylesheet">
-
-    <link rel="stylesheet" type="text/css" href="../css/normalize.css">
-    <link rel="stylesheet" type="text/css" href="../css/skeleton.css">
-    <link rel="stylesheet" type="text/css" href="../css/custom-style.css">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/default.min.css">
-    <link rel="stylesheet" href="../css/hljs-base16.css">
+
     <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/highlight.min.js"></script>
-
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v2.min.js"></script>
 
+    <!-- TODO: Add simple styling here -->
+    <!-- TODO: Site sources! -->
     <style>
-        .gridlines line {
-            stroke: #bbb;
-        }
-
-        .gridlines .domain {
-            stroke: none;
-        }
     </style>
 </head>
 
 <body>
     <p>
         <script>
-            d3.json('../chip_dataset.json').then((data) => {
+            const width = 960;
+            const height = 600;
 
+            const svg = d3.select('body')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            const path = d3.geoPath(); // TODO: Complete
+            const projection = d3
+                .geoAlbersUsa()
+                .scale(1300)
+                .translate([487.5, 305]);
+
+            const citiesSalaries = new Map();
+
+            const getCityStateKey = (str) => {
+                let parts = str.split(',');
+                return JSON.stringify({ city: parts[0].trim(), state: parts[1].trim() });
+            };
+
+            // TODO: Use map from city to ([salaries], area, longitude, latitude)
+            Promise.all([
+                d3.csv('../salary_data.csv'),
+                d3.csv('../city_stats.csv'),
+            ]).then(([salaryData, cityData]) => {
+                // Populate citiesSalaries map
+                salaryData.forEach(d => {
+                    const key = getCityStateKey(d.location);
+                    const salary = d.totalyearlycompensation;
+
+                    if (citiesSalaries.has(key)) {
+                        let value = citiesSalaries.get(key);
+                        value.salaries.push(salary);
+                        citiesSalaries.set(key, value);
+                    }
+                    else citiesSalaries.set(key, { salaries: [salary] });
+                });
+
+                // Filter and append additional cities metadata from other datasets
+                citiesSalaries.forEach((v, c) => {
+                    cityJson = JSON.parse(c)
+
+                    const stats = cityData.find(d => d["City"] === cityJson.city);
+                    if (!stats) return; // If we cannot find the city stat (likely it is not a US city, then we ignore plotting such salary data)
+
+                    const newValue = { ...v, longitude: stats["Longitude"], latitude: stats["Latitude"], landArea: stats["Land Area (sq mi)"] }
+                    console.log("newValue: " + JSON.stringify(newValue));
+                    citiesSalaries[c] = newValue;
+                });
+
+                const salaryExtent = d3.extent(salaryData, d => d["totalyearlycompensation"]);
+
+                // Color hue scale
+                let colorScale = d3
+                    .scaleSequential()
+                    .domain(salaryExtent)
+                    .interpolator(d3.interpolateBlues);
+
+                let g = svg
+                    .append('g')
+                    .attr('class', 'legend')
+                    .attr('transform', `translate(0, 0)`); // TODO: Change to find appropriate place for legend
+                // .attr('transform', `translate(${margins.left},${margins.top})`);
+
+                // Create the legend
+                const legendWidth = 100;
+                const legendHeight = 10;
+                const numSteps = 20;
+
+                // let x = d3.scaleLinear().domain([1, 50]).rangeRound([0, 2860]);
+
+                // Define the salary scale (for positioning the gradient blocks)
+                const salaryScale = d3.scaleLinear()
+                    .domain(colorScale.domain())  // Use the color scale's domain
+                    .range([0, legendWidth]);
+
+                g.selectAll("rect")
+                    .data(d3.range(numSteps))  // Generate an array of steps
+                    .enter()
+                    .append("rect")
+                    .attr("height", legendHeight)
+                    .attr("x", function (d) {
+                        return (d / numSteps) * width;  // Map each step to its position
+                    })
+                    .attr("width", width / numSteps)  // Set each block's width
+                    .attr("fill", function (d) {
+                        const domainValue = salaryScale.invert((d / numSteps) * legendWidth);
+                        return colorScale(domainValue);
+                    });
+
+                /**
+                g.append("text")
+                    .attr("class", "caption")
+                    .attr("x", x.range()[0])
+                    .attr("y", 0)
+                    .attr("fill", "#000")
+                    .attr("text-anchor", "start")
+                    .attr("font-weight", "bold")
+                    .text("US Tech Salary");
+
+                g.call(
+                    d3
+                        .axisBottom(x)
+                        .tickSize(13)
+                        .tickFormat(function (x, i) {
+                            return i ? x : x + "%";
+                        })
+                        .tickValues(colorScale.domain())
+                )
+                    .select(".domain")
+                    .remove();
+                **/
+
+
+                // TODO: Have to determine the longitude and latitude of dataset points
+                // TODO: Add text + point for popular cities
+                // TODO: Create scales
+
+                // Fetch US topojson
+                d3.json("https://d3js.org/us-10m.v1.json").then(handleUsLoaded);
+
+                function handleUsLoaded(us) {
+                    // TODO: Chart of the US
+                    // TODO: For each city, hopefully find out a way to express the number of jobs in that city by adding proportional particle drift based on the centroid and area of the city, where color is based on the salary
+                    svg.append("g")
+                        .attr("class", "states")
+                        .selectAll("path")
+                        .data(topojson.feature(us, us.objects.states).features)
+                        .enter().append("path")
+                        .attr("fill", "white")
+                        .attr("stroke", "lightgray")
+                        .attr("d", path);
+
+                    /** svg.append("g")
+                        .attr("class", "counties")
+                        .selectAll("path")
+                        .data(topojson.feature(us, us.objects.counties).features)
+                        .enter().append("path")
+                        .attr("d", path); **/
+
+                    /**
+                svg.append("path")
+                    .attr("class", "county-borders")
+                    .attr("d", path(topojson.mesh(us, us.objects.counties, function (a, b) { return a !== b; })));
+                    **/
+                }
             });
         </script>
     </p>
