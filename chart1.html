@@ -77,7 +77,7 @@
                 let colorScale = d3
                     .scaleSequential()
                     .domain(salaryExtent)
-                    .interpolator(d3.interpolateBlues);
+                    .interpolator(d3.interpolateRgb("#ADD8E6", "#003366"));
 
                 let g = svg
                     .append('g')
@@ -174,15 +174,20 @@
                         const coords = projection([longitude, latitude]);
                         const x = coords[0];
                         const y = coords[1];
+                        const usSqMiles = 3.8 * 10 ** 6;
 
                         // Append a circle for each city
-                        svg.append("circle")
-                            .attr("class", "salary-point")
-                            .attr("cx", x)
-                            .attr("cy", y)
-                            .attr("r", 1) // Adjust the radius as needed
-                            .append("title") // Optional: add a tooltip
-                            .text(`${cityJson.city}, ${cityJson.state}: ${value.salaries.join(", ")}`);
+                        value.salaries.sort((a, b) => a - b);
+                        value.salaries.forEach(salary => {
+
+                            svg.append("circle")
+                                .attr("class", "salary-point")
+                                .attr("cx", x)
+                                .attr("cy", y)
+                                .attr("r", 2)
+                                .attr("fill", colorScale(salary))
+                                .text(`${cityJson.city}, ${cityJson.state}: ${value.salaries.join(", ")}`)
+                        });
                     });
                 }
             });
