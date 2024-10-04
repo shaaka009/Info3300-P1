@@ -33,8 +33,8 @@
             const path = d3.geoPath(); // TODO: Complete
             const projection = d3
                 .geoAlbersUsa()
-                .scale(1300)
-                .translate([487.5, 305]);
+                .scale(1280)
+                .translate([480, 300]);
 
             const citiesSalaries = new Map();
 
@@ -62,15 +62,13 @@
                 });
 
                 // Filter and append additional cities metadata from other datasets
-                citiesSalaries.forEach((v, c) => {
-                    cityJson = JSON.parse(c)
-
+                citiesSalaries.forEach((value, city) => {
+                    cityJson = JSON.parse(city)
                     const stats = cityData.find(d => d["City"] === cityJson.city);
                     if (!stats) return; // If we cannot find the city stat (likely it is not a US city, then we ignore plotting such salary data)
 
-                    const newValue = { ...v, longitude: stats["Longitude"], latitude: stats["Latitude"], landArea: stats["Land Area (sq mi)"] }
-                    console.log("newValue: " + JSON.stringify(newValue));
-                    citiesSalaries[c] = newValue;
+                    const newValue = { ...value, longitude: +stats["Longitude"], latitude: +stats["Latitude"], landArea: stats["Land Area (sq mi)"] }
+                    citiesSalaries.set(city, newValue)
                 });
 
                 const salaryExtent = d3.extent(salaryData, d => d["totalyearlycompensation"]);
@@ -136,8 +134,6 @@
                     .remove();
                 **/
 
-
-                // TODO: Have to determine the longitude and latitude of dataset points
                 // TODO: Add text + point for popular cities
                 // TODO: Create scales
 
@@ -145,8 +141,6 @@
                 d3.json("https://d3js.org/us-10m.v1.json").then(handleUsLoaded);
 
                 function handleUsLoaded(us) {
-                    // TODO: Chart of the US
-                    // TODO: For each city, hopefully find out a way to express the number of jobs in that city by adding proportional particle drift based on the centroid and area of the city, where color is based on the salary
                     svg.append("g")
                         .attr("class", "states")
                         .selectAll("path")
@@ -164,10 +158,32 @@
                         .attr("d", path); **/
 
                     /**
-                svg.append("path")
-                    .attr("class", "county-borders")
-                    .attr("d", path(topojson.mesh(us, us.objects.counties, function (a, b) { return a !== b; })));
+                    svg.append("path")
+                        .attr("class", "county-borders")
+                        .attr("d", path(topojson.mesh(us, us.objects.counties, function (a, b) { return a !== b; })));
                     **/
+
+                    // Add salary points
+                    citiesSalaries.forEach((value, key) => {
+                        const cityJson = JSON.parse(key);
+                        const { longitude, latitude } = value;
+
+                        if (!longitude || !latitude) return;
+
+                        // Calculate the x, y coordinates based on the projection
+                        const coords = projection([longitude, latitude]);
+                        const x = coords[0];
+                        const y = coords[1];
+
+                        // Append a circle for each city
+                        svg.append("circle")
+                            .attr("class", "salary-point")
+                            .attr("cx", x)
+                            .attr("cy", y)
+                            .attr("r", 1) // Adjust the radius as needed
+                            .append("title") // Optional: add a tooltip
+                            .text(`${cityJson.city}, ${cityJson.state}: ${value.salaries.join(", ")}`);
+                    });
                 }
             });
         </script>
