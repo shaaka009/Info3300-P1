@@ -14,7 +14,7 @@
     <script src="https://d3js.org/topojson.v2.min.js"></script>
 
     <!-- TODO: Add simple styling here -->
-    <!-- TODO: Site sources! -->
+    <!-- TODO: Site sources! (choropeth map video) -->
     <style>
     </style>
 </head>
@@ -24,17 +24,28 @@
         <script>
             const width = 960;
             const height = 600;
+            const margins = { top: 50, right: 50, bottom: 50, left: 50 };
 
             const svg = d3.select('body')
                 .append('svg')
                 .attr('width', width)
-                .attr('height', height);
+                .attr('height', height)
+                .attr('transform', `translate(${margins.left},${margins.top})`);
 
-            const path = d3.geoPath(); // TODO: Complete
+            // Chart title
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", 20)
+                .attr("text-anchor", "middle")
+                .style("font-size", "24px")
+                .style("font-family", "Raleway, sans-serif")
+                .text("Tech Salaries Across the US")
+
+            const path = d3.geoPath();
             const projection = d3
                 .geoAlbersUsa()
                 .scale(1280)
-                .translate([480, 300]);
+                .translate([480, 320]);
 
             const citiesSalaries = new Map();
 
@@ -82,60 +93,67 @@
                 let g = svg
                     .append('g')
                     .attr('class', 'legend')
-                    .attr('transform', `translate(0, 0)`); // TODO: Change to find appropriate place for legend
-                // .attr('transform', `translate(${margins.left},${margins.top})`);
+                    .attr('transform', `translate(0, 60)`);
 
                 // Create the legend
-                const legendWidth = 100;
-                const legendHeight = 10;
-                const numSteps = 20;
+                const legendWidth = 250;
+                const legendHeight = 12;
+                const numSteps = 5;
 
-                // let x = d3.scaleLinear().domain([1, 50]).rangeRound([0, 2860]);
+                // Define the x scale using the salary extent (for positioning the legend gradient blocks)
+                let x = d3.scaleLinear()
+                    .domain(salaryExtent)
+                    .rangeRound([600, 850]);
 
-                // Define the salary scale (for positioning the gradient blocks)
+                // Define the salary scale (for positioning the legend gradient blocks)
                 const salaryScale = d3.scaleLinear()
                     .domain(colorScale.domain())  // Use the color scale's domain
                     .range([0, legendWidth]);
 
+                // Generate the gradient legend
                 g.selectAll("rect")
                     .data(d3.range(numSteps))  // Generate an array of steps
                     .enter()
                     .append("rect")
                     .attr("height", legendHeight)
                     .attr("x", function (d) {
-                        return (d / numSteps) * width;  // Map each step to its position
+                        // Map each step's domain value to its x position using the x scale
+                        const domainValue = salaryScale.invert((d / numSteps) * legendWidth);
+                        return x(domainValue);  // Use x scale to position based on the domain value
                     })
-                    .attr("width", width / numSteps)  // Set each block's width
+                    .attr("width", function (d) {
+                        // Calculate width of each rectangle based on difference between consecutive steps
+                        const domainValue0 = salaryScale.invert((d / numSteps) * legendWidth);
+                        const domainValue1 = salaryScale.invert(((d + 1) / numSteps) * legendWidth);
+                        return x(domainValue1) - x(domainValue0);  // Width based on scaled difference
+                    })
                     .attr("fill", function (d) {
+                        // Use the color scale to get the corresponding color
                         const domainValue = salaryScale.invert((d / numSteps) * legendWidth);
                         return colorScale(domainValue);
                     });
 
-                /**
+
                 g.append("text")
                     .attr("class", "caption")
                     .attr("x", x.range()[0])
-                    .attr("y", 0)
+                    .attr("y", -4)
                     .attr("fill", "#000")
                     .attr("text-anchor", "start")
                     .attr("font-weight", "bold")
-                    .text("US Tech Salary");
+                    .text("Tech Salary");
 
                 g.call(
                     d3
                         .axisBottom(x)
-                        .tickSize(13)
-                        .tickFormat(function (x, i) {
-                            return i ? x : x + "%";
-                        })
-                        .tickValues(colorScale.domain())
+                        .tickSize(15)
+                        .tickFormat((x, _) => `$${(x / 1e3).toFixed(1)}K`)
+                        .ticks(numSteps)
                 )
                     .select(".domain")
                     .remove();
-                **/
 
                 // TODO: Add text + point for popular cities
-                // TODO: Create scales
 
                 // Fetch US topojson
                 d3.json("https://d3js.org/us-10m.v1.json").then(handleUsLoaded);
@@ -148,7 +166,8 @@
                         .enter().append("path")
                         .attr("fill", "white")
                         .attr("stroke", "darkgray")
-                        .attr("d", path);
+                        .attr("d", path)
+                        .attr('transform', `translate(0, 20)`);
 
                     svg.append("g")
                         .attr("class", "counties")
@@ -159,13 +178,8 @@
                         .attr("stroke", "lightgray")
                         .attr("stroke-width", 0.5)
                         .attr("opacity", 0.5)
-                        .attr("d", path);
-
-                    /**
-                    svg.append("path")
-                        .attr("class", "county-borders")
-                        .attr("d", path(topojson.mesh(us, us.objects.counties, function (a, b) { return a !== b; })));
-                    **/
+                        .attr("d", path)
+                        .attr('transform', `translate(0, 20)`);
 
                     // Add salary points
                     citiesSalaries.forEach((value, key) => {
