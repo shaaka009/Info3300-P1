@@ -14,6 +14,9 @@
 
     <!-- TODO: Site sources! -->
     <style>
+        p {
+            margin: 50px;
+        }
     </style>
 </head>
 
@@ -22,13 +25,11 @@
         <script>
             const width = 960;
             const height = 620;
-            const margins = { top: 50, right: 50, bottom: 50, left: 50 };
 
-            const svg = d3.select('body')
+            const svg = d3.select('#chart1')
                 .append('svg')
                 .attr('width', width)
                 .attr('height', height)
-                .attr('transform', `translate(${margins.left},${margins.top})`);
 
             // Chart title
             svg.append("text")
@@ -43,20 +44,34 @@
             const projection = d3
                 .geoAlbersUsa()
                 .scale(1280)
-                .translate([480, 320]);
+                .translate([480, 300]);
 
             const citiesSalaries = new Map();
+            const stateNameId = new Map(); // Map from state name to id
+            const cityTranslationsLabel = new Map();
 
             const getCityStateKey = (str) => {
                 let parts = str.split(',');
-                return JSON.stringify({ city: parts[0].trim(), state: parts[1].trim() });
+                return JSON.stringify({ city: parts[0].trim(), stateId: parts[1].trim() });
             };
 
-            // TODO: Use map from city to ([salaries], area, longitude, latitude)
             Promise.all([
                 d3.csv('../salary_data.csv'),
                 d3.csv('../city_stats.csv'),
-            ]).then(([salaryData, cityData]) => {
+                d3.csv('../state_id_name.csv'),
+                d3.csv('../popular_cities_translations.csv')
+            ]).then(([salaryData, cityData, stateNameIdData, cityTranslationsData]) => {
+                // Populate city translations
+                cityTranslationsData.forEach(d => {
+                    const key = getCityStateKey(d.location)
+                    cityTranslationsLabel.set(key, { xTranslate: +d['x translate'], yTranslate: +d['y translate'] });
+                });
+
+                // Populate state name and id
+                stateNameIdData.forEach(d => {
+                    stateNameId.set(d["state_id"], d["state_name"]);
+                });
+
                 // Populate citiesSalaries map
                 salaryData.forEach(d => {
                     const key = getCityStateKey(d.location);
@@ -73,9 +88,9 @@
                 // Filter and append additional cities metadata from other datasets
                 citiesSalaries.forEach((value, city) => {
                     cityJson = JSON.parse(city)
-                    const stats = cityData.find(d => d["City"] === cityJson.city);
+                    const stateName = stateNameId.get(cityJson.stateId)
+                    const stats = cityData.find(d => d["City"] === cityJson.city && d["State"] === stateName);
                     if (!stats) return; // If we cannot find the city stat (likely it is not a US city, then we ignore plotting such salary data)
-
                     const newValue = { ...value, longitude: +stats["Longitude"], latitude: +stats["Latitude"], landArea: stats["Land Area (sq mi)"] }
                     citiesSalaries.set(city, newValue)
                 });
@@ -91,7 +106,7 @@
                 let g = svg
                     .append('g')
                     .attr('class', 'legend')
-                    .attr('transform', `translate(0, 60)`);
+                    .attr('transform', `translate(0, 50)`);
 
                 // Create the legend
                 const legendWidth = 250;
@@ -151,8 +166,6 @@
                     .select(".domain")
                     .remove();
 
-                // TODO: Add text + point for popular cities
-
                 // Fetch US topojson
                 d3.json("https://d3js.org/us-10m.v1.json").then(handleUsLoaded);
 
@@ -165,7 +178,6 @@
                         .attr("fill", "white")
                         .attr("stroke", "darkgray")
                         .attr("d", path)
-                        .attr('transform', `translate(0, 20)`);
 
                     svg.append("g")
                         .attr("class", "counties")
@@ -177,9 +189,57 @@
                         .attr("stroke-width", 0.5)
                         .attr("opacity", 0.5)
                         .attr("d", path)
-                        .attr('transform', `translate(0, 20)`);
 
-                    // Add salary points
+                    // Merge salaries into array
+                    let salaries = []
+                    citiesSalaries.forEach((value, key) => {
+                        const cityJson = JSON.parse(key);
+
+                        // Add longitude and latitude to each salary entry
+                        const newSalaries = value.salaries.map(salary => ({ salary, ...value }));
+                        salaries = salaries.concat(newSalaries)
+                    });
+                    // Sort by salary
+                    salaries.sort((a, b) => a.salary - b.salary);
+
+                    // Plot salary points
+                    salaries.forEach(salaryEntry => {
+                        const { longitude, latitude, salary } = salaryEntry
+
+                        if (!longitude || !latitude) return;
+
+                        // Calculate the x, y coordinates based on the projection
+                        const coords = projection([longitude, latitude]);
+                        const x = coords[0];
+                        const y = coords[1];
+                        const usSqMiles = 3.8 * 10 ** 6;
+
+                        // Generate a random angle between 0 and 2 * PI for the direction
+                        const angle = Math.random() * 2 * Math.PI;
+
+                        // Generate a distance with bias towards the center (closer to centroid)
+                        const maxDrift = salaryEntry.landArea / usSqMiles * 50000;
+                        const distance = Math.random() ** 2 * maxDrift; // Squared to bias toward shorter distances
+
+                        // Calculate the drift in x and y directions using the angle
+                        const driftX = Math.cos(angle) * distance;
+                        const driftY = Math.sin(angle) * distance;
+
+                        svg.append("circle")
+                            .attr("class", "salary-point")
+                            .attr("cx", x + driftX)
+                            .attr("cy", y + driftY)
+                            .attr("r", 1.5)
+                            .attr("fill", colorScale(salary))
+                            .attr("opacity", 0.5);
+                    });
+
+                    // Find top cities with most job salaries
+                    let rankedCities = Array.from(citiesSalaries.entries());
+                    rankedCities.sort((a, b) => b[1].salaries.length - a[1].salaries.length);
+                    let topCities = rankedCities.slice(0, 50);
+                    let topCityKeys = new Set(topCities.map(cityEntry => cityEntry[0]));
+
                     citiesSalaries.forEach((value, key) => {
                         const cityJson = JSON.parse(key);
                         const { longitude, latitude } = value;
@@ -190,31 +250,35 @@
                         const coords = projection([longitude, latitude]);
                         const x = coords[0];
                         const y = coords[1];
-                        const usSqMiles = 3.8 * 10 ** 6;
 
-                        // Append a circle for each city
-                        value.salaries.sort((a, b) => a - b);
-                        value.salaries.forEach(salary => {
-                            // Generate a random angle between 0 and 2 * PI for the direction
-                            const angle = Math.random() * 2 * Math.PI;
+                        // Add city label if in top most popular cities
+                        if (topCityKeys.has(key)) {
+                            let { xTranslate, yTranslate } = cityTranslationsLabel.get(key);
 
-                            // Generate a distance with bias towards the center (closer to centroid)
-                            const maxDrift = value.landArea / usSqMiles * 50000;
-                            const distance = Math.random() ** 2 * maxDrift; // Squared to bias toward shorter distances
-
-                            // Calculate the drift in x and y directions using the angle
-                            const driftX = Math.cos(angle) * distance;
-                            const driftY = Math.sin(angle) * distance;
+                            svg.append("line")
+                                .attr("x1", x)
+                                .attr("y1", y)
+                                .attr("x2", x + xTranslate)
+                                .attr("y2", y + yTranslate)
+                                .attr("stroke", "black")
+                                .attr("opacity", 0.4)
+                                .attr("stroke-width", 1);
 
                             svg.append("circle")
-                                .attr("class", "salary-point")
-                                .attr("cx", x + driftX)
-                                .attr("cy", y + driftY)
+                                .attr("cx", x + xTranslate)
+                                .attr("cy", y + yTranslate)
                                 .attr("r", 1.5)
-                                .attr("fill", colorScale(salary))
-                                .attr("opacity", 0.5)
-                                .text(`${cityJson.city}, ${cityJson.state}: ${value.salaries.join(", ")}`)
-                        });
+                                .attr("opacity", 0.4)
+                                .attr("fill", "black")
+
+                            svg.append("text")
+                                .attr("x", x + xTranslate)
+                                .attr("y", y + yTranslate)
+                                .attr("class", "city-label")
+                                .style("font-size", "10px")
+                                .style("font-family", "Lato, sans-serif")
+                                .text(`${cityJson.city}, ${cityJson.stateId}`);
+                        }
                     });
                 }
             });
@@ -487,14 +551,8 @@
                     .attr("x", (-chartHeight / 2))
                     .style("text-anchor", "middle")
                     .text("Average Compensation (USD)");
-            }
-            )
-
-
+            });
         </script>
-
-
-
     </p>
 
 </body>
