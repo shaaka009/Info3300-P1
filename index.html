@@ -555,6 +555,197 @@
         </script>
     </p>
 
+
+    <p id="chart3">
+        <script>
+
+            // TODO: Add legend, change colors, add title, maybe add important cities
+            const stateMap = new Map([
+                ["AL", "ALABAMA"],
+                ["AK", "ALASKA"],
+                ["AZ", "ARIZON"],
+                ["AR", "ARKANSAS"],
+                ["CA", "CALIFORNIA"],
+                ["CO", "COLORADO"],
+                ["CT", "CONNECTICUT"],
+                ["DE", "DELAWARE"],
+                ["FL", "FLORIDA"],
+                ["GA", "GEORGIA"],
+                ["HI", "HAWAII"],
+                ["ID", "IDAHO"],
+                ["IL", "ILLINOIS"],
+                ["IN", "INDIANA"],
+                ["IA", "IOWA"],
+                ["KS", "KANSAS"],
+                ["KY", "KENTUCKY"],
+                ["LA", "LOUISIANA"],
+                ["ME", "MAINE"],
+                ["MD", "MARYLAND"],
+                ["MA", "MASSACHUSETTS"],
+                ["MI", "MICHIGAN"],
+                ["MN", "MINNESOTA"],
+                ["MS", "MISSISSIPPI"],
+                ["MO", "MISSOUR"],
+                ["MT", "MONTANA"],
+                ["NE", "NEBRASKA"],
+                ["NV", "NEVADA"],
+                ["NH", "NEW HAMPSHIRE"],
+                ["NJ", "NEW JERSEY"],
+                ["NM", "NEW MEXICO"],
+                ["NY", "NEW YORK"],
+                ["NC", "NORTH CAROLINA"],
+                ["ND", "NORTH DAKOTA"],
+                ["OH", "OHIO"],
+                ["OK", "OKLAHOMA"],
+                ["OR", "OREGON"],
+                ["PA", "PENNSYLVANIA"],
+                ["RI", "RHODE ISLAND"],
+                ["SC", "SOUTH CAROLINA"],
+                ["SD", "SOUTH DAKOTA"],
+                ["TN", "TENNESSEE"],
+                ["TX", "TEXAS"],
+                ["UT", "UTAH"],
+                ["VT", "VERMONT"],
+                ["VA", "VIRGINIA"],
+                ["WA", "WASHINGTON"],
+                ["WV", "WEST VIRGINIA"],
+                ["WI", "WISCONSIN"],
+                ["WY", "WYOMING"]
+            ]);
+
+            const C3width = 1160;
+            const C3height = 650;
+
+            const svg3 = d3.select('body')
+                .append('svg')
+                .attr('width', C3width)
+                .attr('height', C3height);
+
+            svg3.append('rect')
+                .attr('x', 0)
+                .attr('y', 0)
+                .attr('width', C3width - 200)
+                .attr('height', C3height)
+                .attr('fill', "#8c8c8c");
+
+            svg3.append('rect')
+                .attr('x', 0)
+                .attr('y', 0)
+                .attr('width', C3width)
+                .attr('height', C3height)
+                .attr('fill', "#fcecbd")
+                .attr('stroke', "#000000")
+                .attr('stroke-width', "10px");
+
+            const USMap = d3
+                .geoAlbersUsa()
+                .scale(1280)
+                .translate([480, 300]);
+
+            const jobCount = new Map();
+
+            const getCityStateKey3 = (str) => {
+                let parts = str.split(',');
+                return [parts[0].trim(), parts[1].trim()];
+            };
+
+            Promise.all([
+                d3.csv('salary_data.csv'),
+                d3.csv('city_stats.csv'),
+            ]).then(([salaryData, cityData]) => {
+
+                let max = 0;
+
+                cityMap = new Map();
+                cityData.forEach(city => {
+                    const cityKey = city["City"].toUpperCase() + "," + city["State"].toUpperCase();
+                    cityMap.set(cityKey, city);
+                });
+
+                salaryData.forEach(d => {
+
+                    const cityState = getCityStateKey3(d.location);
+                    const city = cityMap.get(cityState[0].toUpperCase() + "," + stateMap.get(cityState[1]));
+                    if (!city) return;
+                    if (jobCount.has(city)) {
+                        let count = jobCount.get(city);
+                        count += 1;
+                        if (jobCount > max) max = jobCount;
+                        jobCount.set(city, count);
+                    }
+
+                    else jobCount.set(city, 1);
+
+                });
+
+                jobCount.forEach((v, k) => {
+
+                    jobCount.set(k, Math.log(v));
+
+                });
+
+                console.log("done logifying,");
+
+                const colorScale = d3.scaleSequential()
+                    .domain([0, Math.log(max)])
+                    .interpolator(d3.interpolateBlues);
+
+                const sizeScale = d3.scaleLinear()
+                    .domain([0, 20])
+                    .range([1, 50]);
+
+                d3.json("https://d3js.org/us-10m.v1.json").then(handleUsLoaded3);
+
+                function handleUsLoaded3(us) {
+                    svg3.append("g")
+                        .attr("class", "states")
+                        .selectAll("path")
+                        .data(topojson.feature(us, us.objects.states).features)
+                        .enter().append("path")
+                        .attr("fill", "white")
+                        .attr("stroke", "darkgray")
+                        .attr("d", path);
+
+                    svg3.append("g")
+                        .attr("class", "counties")
+                        .selectAll("path")
+                        .data(topojson.feature(us, us.objects.counties).features)
+                        .enter().append("path")
+                        .attr("fill", "white")
+                        .attr("stroke", "lightgray")
+                        .attr("stroke-width", 0.5)
+                        .attr("opacity", 0.5)
+                        .attr("d", path);
+
+                    jobCount.forEach((value, key) => {
+
+                        longitude = key.Longitude;
+                        latitude = key.Latitude;
+
+                        if (!parseInt(longitude) || !parseInt(latitude)) return;
+
+                        // Calculate the x, y coordinates based on the projection
+                        const coords = USMap([longitude, latitude]);
+                        const x = coords[0];
+                        const y = coords[1];
+
+                        // Append a circle for each city
+                        svg3.append("circle")
+                            .attr("class", "density")
+                            .attr("cx", x)
+                            .attr("cy", y)
+                            .attr("r", sizeScale(value))
+                            .attr("fill", colorScale(value))
+                            .attr("opacity", 0.3);
+                    });
+
+                };
+
+            });
+
+        </script>
+    </p>
+
 </body>
 
 </html>
