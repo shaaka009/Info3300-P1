@@ -614,7 +614,7 @@
             ]);
 
             const C3width = 1160;
-            const C3height = 650;
+            const C3height = 750;
 
             const svg3 = d3.select('body')
                 .append('svg')
@@ -624,16 +624,9 @@
             svg3.append('rect')
                 .attr('x', 0)
                 .attr('y', 0)
-                .attr('width', C3width - 200)
-                .attr('height', C3height)
-                .attr('fill', "#8c8c8c");
-
-            svg3.append('rect')
-                .attr('x', 0)
-                .attr('y', 0)
                 .attr('width', C3width)
-                .attr('height', C3height)
-                .attr('fill', "#fcecbd")
+                .attr('height', C3height - 120)
+                .attr('fill', "#fff")
                 .attr('stroke', "#000000")
                 .attr('stroke-width', "10px");
 
@@ -670,7 +663,7 @@
                     if (jobCount.has(city)) {
                         let count = jobCount.get(city);
                         count += 1;
-                        if (jobCount > max) max = jobCount;
+                        if (count > max) max = count;
                         jobCount.set(city, count);
                     }
 
@@ -691,10 +684,27 @@
                     .interpolator(d3.interpolateBlues);
 
                 const sizeScale = d3.scaleLinear()
-                    .domain([0, 20])
-                    .range([1, 50]);
+                    .domain([0, Math.log(max)])
+                    .range([0, 25]);
 
                 d3.json("https://d3js.org/us-10m.v1.json").then(handleUsLoaded3);
+
+                function legendCircles(number) {
+
+                    for (let i = 1; i < number; i++) {
+
+                        console.log(sizeScale(10 ** i));
+
+                        svg3.append("circle")
+                            .attr("cx", 1050)
+                            .attr("cy", 55 + ((i - 1) * 112.5))
+                            .attr("r", sizeScale(Math.log(10 ** i)))
+                            .attr("fill", "#00C")
+                            .attr("opacity", 1.0);
+
+                    }
+
+                }
 
                 function handleUsLoaded3(us) {
                     svg3.append("g")
@@ -735,11 +745,27 @@
                             .attr("cx", x)
                             .attr("cy", y)
                             .attr("r", sizeScale(value))
-                            .attr("fill", colorScale(value))
+                            .attr("fill", "#00C")
                             .attr("opacity", 0.3);
+
                     });
 
+                    const axisScale = d3.scaleLog()
+                        .domain([10, 10000])
+                        .range([50, C3height - 350]);
+
+                    let leftAxis = d3.axisLeft(axisScale).ticks(5);
+
+                    svg3.append('g')
+                        .attr('class', 'y axis')
+                        .attr('transform', `translate(1000,0)`)
+                        .call(leftAxis);
+
+                    legendCircles(5);
+
                 };
+
+
 
             });
 
