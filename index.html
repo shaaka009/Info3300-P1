@@ -292,7 +292,7 @@
             let svgChart2 = d3.select("svg#chart2");
             let width2 = svgChart2.attr("width");
             let height2 = svgChart2.attr("height");
-            const margin = { top: 20, right: 20, bottom: 50, left: 100 };
+            const margin = { top: 20, right: 100, bottom: 50, left: 100 };
             const chartWidth = width - margin.left - margin.right;
             const chartHeight = height - margin.top - margin.bottom;
             let chartArea = svgChart2.append("g")
@@ -381,7 +381,7 @@
                 });
                 const aggregatedOtherData = d3.rollups(
                     otherData,
-                    v => d3.mean(v, d => d.totalyearlycompensation),
+                    v => d3.median(v, d => d.totalyearlycompensation),
                     d => d.level_numeric).map(([level, avgCompensation]) => {
                         return {
                             company: "OTHERS",
@@ -421,7 +421,7 @@
 
                     const avgData = d3.rollups(
                         finalData,
-                        v => d3.mean(v, d => d.totalyearlycompensation),
+                        v => d3.median(v, d => d.totalyearlycompensation),
                         d => d.company,
                         d => d.standardized_level
                     ).map(([company, levels]) => {
@@ -439,7 +439,7 @@
                 // Calculate the average compensation for each standardized level per company
                 const avgData = d3.rollups(
                     standardizedData,
-                    v => d3.mean(v, d => d.totalyearlycompensation),
+                    v => d3.median(v, d => d.totalyearlycompensation),
                     d => d.company,
                     d => d.standardized_level
                 ).map(([company, levels]) => {
@@ -465,11 +465,13 @@
                 // Create color scale for levels
                 const colorScale = d3.scaleOrdinal()
                     .domain(standardizedLevels)
-                    .range(["#1f77b4", "#ff7f0e", "#2ca02c"]); // Different colors for L1, L2, Senior
+                    .range(["#4e79a7", "#f28e2b", "#76b7b2"]); // Different colors for L1, L2, Senior
 
                 // Define scales for x and y axes
                 const xScale = d3.scaleBand()
-                    .domain(avgData.map(d => d.company))
+                    .domain(avgData
+                        .sort((a, b) => (a["Senior"] || 0) + (a["L1"] || 0) + (a["L2"] || 0) - (b["Senior"] || 0) - (b["L1"] || 0) - (b["L2"] || 0))
+                        .map(d => d.company))
                     .range([0, chartWidth])
                     .padding(0.1);
 
@@ -480,7 +482,7 @@
 
                 const legend = svgChart2.append("g")
                     .attr("id", "legend")
-                    .attr("transform", `translate(${width2 - margin.right - 50}, ${margin.top + 50})`);
+                    .attr("transform", `translate(${width2 - margin.right}, ${margin.top + 50})`);
 
                 const legendData = standardizedLevels.map((level, i) => ({
                     level: level,
@@ -550,7 +552,7 @@
                     .attr("y", -margin.left + 40)
                     .attr("x", (-chartHeight / 2))
                     .style("text-anchor", "middle")
-                    .text("Average Compensation (USD)");
+                    .text("Median Compensation (USD)");
             });
         </script>
     </p>
@@ -742,7 +744,7 @@
                             .attr("cy", y)
                             .attr("r", sizeScale(value))
                             .attr("fill", "#00C")
-                            .attr("opacity", 0.3);
+                            .attr("opacity", 1);
 
                     });
 
@@ -834,7 +836,7 @@
                 // Prepare the data for the line chart
                 const lineChartData = d3.rollups(
                     rawData,
-                    v => d3.mean(v, d => d.totalyearlycompensation),
+                    v => d3.median(v, d => d.totalyearlycompensation),
                     d => d.company,
                     d => d.level_numeric
                 ).map(([company, levels]) => {
@@ -915,7 +917,7 @@
                     .attr("y", -50)
                     .attr("x", -chartHeight4 / 2)
                     .style("text-anchor", "middle")
-                    .text("Total Yearly Compensation (USD)");
+                    .text("Median Total Yearly Compensation (USD)");
 
                 // Add a legend
                 const legend = svgChart4.append("g")
