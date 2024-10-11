@@ -505,7 +505,8 @@
                 // Create color scale for levels
                 const colorScale = d3.scaleOrdinal()
                     .domain(standardizedLevels)
-                    .range(["#4e79a7", "#f28e2b", "#76b7b2"]); // Different colors for L1, L2, Senior
+                    // Different colors for L1, L2, Senior
+                    .range(["#4e79a7", "#f28e2b", "#d62728"]);
 
                 // Define scales for x and y axes
                 const xScale = d3.scaleBand()
@@ -746,7 +747,7 @@
                             .attr("cy", 55 + ((i - 1) * 112.5))
                             .attr("r", sizeScale(Math.log(10 ** i)))
                             .attr("fill", "#00C")
-                            .attr("opacity", 1.0);
+                            .attr("opacity", 1.0)
 
                     }
 
@@ -792,8 +793,7 @@
                             .attr("cy", y)
                             .attr("r", sizeScale(value))
                             .attr("fill", "#00C")
-                            .attr("opacity", 1);
-
+                            .attr("opacity", 1)
                     });
 
                     const axisScale = d3.scaleLog()
