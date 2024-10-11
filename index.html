@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>US Tech Salary</title>
+    <title>US Tech Market</title>
 
     <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Raleway:400,700" rel="stylesheet">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/default.min.css">
@@ -12,7 +12,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://d3js.org/topojson.v2.min.js"></script>
 
-    <!-- TODO: Site sources! -->
+    <!-- TODO: Cite sources! -->
     <style>
         p {
             margin: 50px;
@@ -21,7 +21,22 @@
 </head>
 
 <body>
+    <h1
+        style="font-size: 36px; font-family: 'Lato', sans-serif; font-weight: 700; text-align: center; margin-top: 20px;">
+        Tech Salaries across the US in different companies</h1>
+    <h2 style="font-family: 'Lato', sans-serif; font-weight: bold; font-size: 28px; color: #333;">
+        Chart 1: Tech Salaries Across the US</h2>
+    <p style="font-family: 'Raleway', sans-serif; font-size: 18px; line-height: 1.6; color: #444; margin: 20px;">
+        We wanted to see if there are dominant regions for tech jobs and whether being in a large city affects whether
+        you get paid more or not. <br> <br>
+        Below is a chart that shows the distribution of tech salaries across the US.
+        The salaries are represented by color saturation, with darker saturations indicating higher salaries.
+        The map also highlights some of the most popular cities for tech jobs. We've outlined some of the major cities
+        to help
+        see if it's truly dense in major cities. We can see below that California seems to be the state with the highest
+        density of jobs, all in the bay area. </p>
     <p id="chart1">
+
         <script>
             const width = 960;
             const height = 620;
@@ -31,7 +46,6 @@
                 .attr('width', width)
                 .attr('height', height)
 
-            // Chart title
             svg.append("text")
                 .attr("x", width / 2)
                 .attr("y", 20)
@@ -47,7 +61,7 @@
                 .translate([480, 300]);
 
             const citiesSalaries = new Map();
-            const stateNameId = new Map(); // Map from state name to id
+            const stateNameId = new Map();
             const cityTranslationsLabel = new Map();
 
             const getCityStateKey = (str) => {
@@ -125,20 +139,19 @@
 
                 // Generate the gradient legend
                 g.selectAll("rect")
-                    .data(d3.range(numSteps))  // Generate an array of steps
+                    .data(d3.range(numSteps))
                     .enter()
                     .append("rect")
                     .attr("height", legendHeight)
                     .attr("x", function (d) {
                         // Map each step's domain value to its x position using the x scale
                         const domainValue = salaryScale.invert((d / numSteps) * legendWidth);
-                        return x(domainValue);  // Use x scale to position based on the domain value
+                        return x(domainValue);
                     })
                     .attr("width", function (d) {
-                        // Calculate width of each rectangle based on difference between consecutive steps
                         const domainValue0 = salaryScale.invert((d / numSteps) * legendWidth);
                         const domainValue1 = salaryScale.invert(((d + 1) / numSteps) * legendWidth);
-                        return x(domainValue1) - x(domainValue0);  // Width based on scaled difference
+                        return x(domainValue1) - x(domainValue0);
                     })
                     .attr("fill", function (d) {
                         // Use the color scale to get the corresponding color
@@ -286,6 +299,18 @@
     </p>
 
 
+    <h2 style="font-family: 'Lato', sans-serif; font-weight: bold; font-size: 28px; color: #333;">
+        Chart 2: Tech Salaries Across Different Companies</h2>
+    <p style="font-family: 'Raleway', sans-serif; font-size: 18px; line-height: 1.6; color: #444; margin: 20px;">
+        We wanted to see if there are certain companies that dominated the tech market or if it was actually quite
+        diverse between different companies.
+        We also wanted to see how many people were at higher levels at these companies and if their promotion pay varied
+        by a lot. <br> <br>
+        Below is a chart that shows the different companies, their average salaries at each level. The salaries are
+        based on the y position, the company is along the x-axis and
+        the different level they're at within the company is based on the color hue which can be seen in the legend.
+    </p>
+
     <p id="chart2">
         <svg id="chart2" width="1000" height="800"></svg>
         <script>
@@ -295,9 +320,18 @@
             const margin = { top: 20, right: 100, bottom: 50, left: 100 };
             const chartWidth = width - margin.left - margin.right;
             const chartHeight = height - margin.top - margin.bottom;
+
             let chartArea = svgChart2.append("g")
                 .attr("id", "chartArea")
                 .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            svgChart2.append("text")
+                .attr("x", width2 / 2)
+                .attr("y", 20)
+                .attr("text-anchor", "middle")
+                .style("font-size", "24px")
+                .style("font-family", "Raleway, sans-serif")
+                .text("Tech Salaries Across Companies")
 
             d3.csv("../salary_data.csv").then((rawData) => {
                 rawData = rawData.filter(d => {
@@ -345,7 +379,8 @@
                             d.level_numeric = 3;
                         }
                         else if (d.level.toUpperCase().includes("SENIOR")) {
-                            d.level_numeric = 3; // Assign a specific value for "Senior"
+                            //If senior assign a specific numeric vlaue
+                            d.level_numeric = 3;
                         } else if (d.level.startsWith("L") && !isNaN(parseInt(d.level.slice(1)))) {
                             d.level_numeric = parseInt(d.level.replace("L", ""));
                         }
@@ -403,11 +438,14 @@
                         }
                         else {
                             if (index === 0) {
-                                levelMapping[level] = "L1"; // Map the lowest level to L1
+                                // Lowest is L1 
+                                levelMapping[level] = "L1";
                             } else if (index === 1) {
-                                levelMapping[level] = "L2"; // Map the second lowest to L2
+                                // Medium is L2
+                                levelMapping[level] = "L2";
                             } else {
-                                levelMapping[level] = "Senior"; // Map the rest to Senior
+                                // Highest is L3 i.e. senior
+                                levelMapping[level] = "Senior";
                             }
                         }
                     }
@@ -445,7 +483,8 @@
                 ).map(([company, levels]) => {
                     const result = { company };
                     levels.forEach(([level, avgCompensation]) => {
-                        result[level] = avgCompensation || 0; // If no data, set compensation to 0
+                        //if data is not there, set it to 0
+                        result[level] = avgCompensation || 0;
                     });
                     return result;
                 });
@@ -456,7 +495,8 @@
                     if (companyData) {
                         standardizedLevels.forEach(level => {
                             if (!companyData[level]) {
-                                companyData[level] = 0; // If level is missing, set compensation to 0
+                                // similarly no level just set comp to 0
+                                companyData[level] = 0;
                             }
                         });
                     }
@@ -557,6 +597,14 @@
         </script>
     </p>
 
+    <h2 style="font-family: 'Lato', sans-serif; font-weight: bold; font-size: 28px; color: #333;">
+        Chart 3: Tech Positions Density vs Location in US</h2>
+    <p style="font-family: 'Raleway', sans-serif; font-size: 18px; line-height: 1.6; color: #444; margin: 20px;">
+        We wanted to experiment with a different channel what the density of jobs looked like in the tech industry
+        across the US. <br> <br>
+        Below is a chart that shows the different states and the density of jobs within the state based on the size of
+        the circle. The appropriate legend can be seen on the right.
+    </p>
 
     <p id="chart3">
         <script>
@@ -566,7 +614,7 @@
             const stateMap = new Map([
                 ["AL", "ALABAMA"],
                 ["AK", "ALASKA"],
-                ["AZ", "ARIZON"],
+                ["AZ", "ARIZONA"],
                 ["AR", "ARKANSAS"],
                 ["CA", "CALIFORNIA"],
                 ["CO", "COLORADO"],
@@ -588,7 +636,7 @@
                 ["MI", "MICHIGAN"],
                 ["MN", "MINNESOTA"],
                 ["MS", "MISSISSIPPI"],
-                ["MO", "MISSOUR"],
+                ["MO", "MISSOURI"],
                 ["MT", "MONTANA"],
                 ["NE", "NEBRASKA"],
                 ["NV", "NEVADA"],
@@ -616,7 +664,7 @@
                 ["WY", "WYOMING"]
             ]);
 
-            const C3width = 1160;
+            const C3width = 1360;
             const C3height = 750;
 
             const svg3 = d3.select('body')
@@ -624,14 +672,14 @@
                 .attr('width', C3width)
                 .attr('height', C3height);
 
-            svg3.append('rect')
-                .attr('x', 0)
-                .attr('y', 0)
-                .attr('width', C3width)
-                .attr('height', C3height - 120)
-                .attr('fill', "#fff")
-                .attr('stroke', "#000000")
-                .attr('stroke-width', "10px");
+            // svg3.append('rect')
+            //     .attr('x', 0)
+            //     .attr('y', 0)
+            //     .attr('width', C3width)
+            //     .attr('height', C3height - 120)
+            //     .attr('fill', "#fff")
+            //     .attr('stroke', "#000000")
+            //     .attr('stroke-width', "10px");
 
             const USMap = d3
                 .geoAlbersUsa()
@@ -694,7 +742,7 @@
 
                     for (let i = 1; i < number; i++) {
                         svg3.append("circle")
-                            .attr("cx", 1050)
+                            .attr("cx", 1120)
                             .attr("cy", 55 + ((i - 1) * 112.5))
                             .attr("r", sizeScale(Math.log(10 ** i)))
                             .attr("fill", "#00C")
@@ -756,20 +804,43 @@
 
                     svg3.append('g')
                         .attr('class', 'y axis')
-                        .attr('transform', `translate(1000,0)`)
+                        .attr('transform', `translate(1070,0)`)
                         .call(leftAxis);
 
                     legendCircles(5);
 
                 };
 
+                svg3.append("text")
+                    .text("SWE Job Density Across the US")
+                    .attr("x", 870)
+                    .attr("y", 500)
+                    .attr("font-family", "'Lato', sans-serif")
+                    .attr("font-size", 28)
+                    .attr("color", "#333");
 
-
+                svg3.append("text")
+                    .text("# of Jobs in City")
+                    .attr("transform", "translate(1030,280)rotate(-90)")
+                    .attr("font-family", "'Lato', sans-serif")
+                    .attr("font-size", 16)
+                    .attr("color", "#333");
             });
 
         </script>
     </p>
 
+    <h2 style="font-family: 'Lato', sans-serif; font-weight: bold; font-size: 28px; color: #333;">
+        Chart 4: Compensation vs Position Level and Salary</h2>
+    <p style="font-family: 'Raleway', sans-serif; font-size: 18px; line-height: 1.6; color: #444; margin: 20px;">
+        We wanted to attempt to use different marks to help visualize our data even better and modify the way we
+        visualize our data.
+        We wanted to see if companies all converged to the same y for salary or if the range differed by a lot. We also
+        wanted to
+        explore what salaries looked like much more relative (on a common scale) at each level. <br> <br>
+        Below is a chart representing compensation vs position at different companies that are differentiated by the
+        color hues which
+        can be seen on the legend on the right. </p>
     <p id="chart4">
         <svg id="chart4" width="1000" height="800"></svg>
         <script>
@@ -846,6 +917,8 @@
                     });
                     return result;
                 });
+
+                // Alot of the above preprocessing was reused from chart 2.
 
                 const companies = Array.from(new Set(lineChartData.map(d => d.company)));
                 const levels = ["L1", "L2", "L3", "L4", "L5", "L6"];
@@ -944,6 +1017,17 @@
                 });
             });
         </script>
+    </p>
+
+    <p style="font-family: 'Raleway', sans-serif; font-size: 18px; line-height: 1.6; color: #444; margin: 20px;">
+        In conclusion, after a lot of visualizing and analyzing we can see that the tech industry is dominated in major
+        cities like Seattle, (almost all of the bay area in California), New York and a few other different major
+        cities.
+        We can also see the pay is the highest in the bay area, which might be a way to try and counter the high tax
+        rates in that region. We can see the variance between salaries is pretty high even for some of the big companies
+        we know
+        which is interesting as we would've thought they'd end up convering at some point, guess money isn't infinite
+        even at the trillion dollar mark!
     </p>
 
 
