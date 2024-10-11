@@ -560,6 +560,7 @@
         <script>
 
             // TODO: Add legend, change colors, add title, maybe add important cities
+            // TODO: Replace with state_id_name.csv data
             const stateMap = new Map([
                 ["AL", "ALABAMA"],
                 ["AK", "ALASKA"],
@@ -677,8 +678,6 @@
 
                 });
 
-                console.log("done logifying,");
-
                 const colorScale = d3.scaleSequential()
                     .domain([0, Math.log(max)])
                     .interpolator(d3.interpolateBlues);
@@ -692,9 +691,6 @@
                 function legendCircles(number) {
 
                     for (let i = 1; i < number; i++) {
-
-                        console.log(sizeScale(10 ** i));
-
                         svg3.append("circle")
                             .attr("cx", 1050)
                             .attr("cy", 55 + ((i - 1) * 112.5))
@@ -771,6 +767,183 @@
 
         </script>
     </p>
+
+    <p id="chart4">
+        <svg id="chart4" width="1000" height="800"></svg>
+        <script>
+            let svgChart4 = d3.select("svg#chart4");
+            let width4 = svgChart4.attr("width");
+            let height4 = svgChart4.attr("height");
+            const margin4 = { top: 20, right: 200, bottom: 50, left: 100 };
+            const chartWidth4 = width4 - margin4.left - margin4.right;
+            const chartHeight4 = height4 - margin4.top - margin4.bottom;
+            let chartArea4 = svgChart4.append("g")
+                .attr("id", "chartArea4")
+                .attr("transform", `translate(${margin4.left},${margin4.top})`);
+
+            // Define the set of companies to display
+            const filteredCompanies = ["Meta/Facebook", "Google", "Netflix", "Amazon", "Apple", "Stripe", "Databricks", "Microsoft", "Figma", "OpenAI", "Nvidia", "Uber"];
+
+            // Process the CSV data
+            d3.csv("../salary_data.csv").then((rawData) => {
+                // Filter data for top companies and relevant levels
+                rawData = rawData.filter(d => {
+                    const level = d.level.toUpperCase();
+                    const isValidLevel = level.startsWith("L") && !isNaN(parseInt(level.slice(1)));
+                    return d.company && d.company.toUpperCase() !== "N/A" && !level.includes("INTERN") && isValidLevel;
+                });
+
+                // Filter out only the selected companies
+                rawData = rawData.filter(d => filteredCompanies.includes(d.company));
+
+                // Map to normalized company names (if needed)
+                const companyMapping = {
+                    "AMAZON WEB SERVICES": "AMAZON",
+                    "AWS": "AMAZON",
+                    "MICROSOFT CORPORATION": "MICROSOFT",
+                    "MICROSOFT CORP": "MICROSOFT",
+                    "GOOGLE CLOUD": "GOOGLE",
+                    "ALPHABET": "GOOGLE",
+                    " GOOGLE": "GOOGLE",
+                    "FB": "META",
+                    "FACEBOOK": "META",
+                    "META PLATFORMS": "META",
+                    "APPLE INC.": "APPLE",
+                    "INTEL CORPORATION": "INTEL",
+                    "IBM CORPORATION": "IBM",
+                    "INTL BUSINESS MACHINES": "IBM",
+                    "ORACLE CORPORATION": "ORACLE",
+                    "ORACLE CORP": "ORACLE",
+                    "SAP SE": "SAP",
+                    "WALMART INC.": "WALMART",
+                    "WALMART LABS": "WALMART",
+                    "TESLA INC.": "TESLA",
+                    "TESLA MOTORS": "TESLA",
+                };
+
+                rawData.forEach(d => {
+                    let companyName = d.company.toUpperCase();
+                    if (companyMapping[companyName]) companyName = companyMapping[companyName];
+                    d.company = companyName.trim();
+                    d.totalyearlycompensation = +d.totalyearlycompensation;
+                    if (d.level.startsWith("L") && !isNaN(parseInt(d.level.slice(1)))) d.level_numeric = parseInt(d.level.replace("L", ""));
+                });
+
+                rawData = rawData.filter(d => d.level_numeric > 0 && d.totalyearlycompensation > 0);
+
+                // Prepare the data for the line chart
+                const lineChartData = d3.rollups(
+                    rawData,
+                    v => d3.mean(v, d => d.totalyearlycompensation),
+                    d => d.company,
+                    d => d.level_numeric
+                ).map(([company, levels]) => {
+                    const result = { company };
+                    levels.forEach(([level, avgCompensation]) => {
+                        if (avgCompensation > 0) result[`L${level}`] = avgCompensation;
+                    });
+                    return result;
+                });
+
+                const companies = Array.from(new Set(lineChartData.map(d => d.company)));
+                const levels = ["L1", "L2", "L3", "L4", "L5", "L6"];
+
+                // Create scales
+                const xScale = d3.scalePoint()
+                    .domain(levels)
+                    .range([0, chartWidth4])
+                    .padding(0.5);
+
+                const yScale = d3.scaleLinear()
+                    .domain([0, d3.max(lineChartData, d => Math.max(d.L1 || 0, d.L2 || 0, d.L3 || 0, d.L4 || 0, d.L5 || 0, d.L6 || 0))])
+                    .range([chartHeight4, 0]);
+
+                const colorScale = d3.scaleOrdinal()
+                    .domain(companies)
+                    .range(d3.schemeTableau10);
+
+                // Define the line generator
+                const lineGenerator = d3.line()
+                    .x(d => xScale(d.level))
+                    .y(d => yScale(d.salary));
+
+                // Prepare data for each company
+                companies.forEach(company => {
+                    const companyData = levels.map(level => {
+                        return {
+                            level: level,
+                            salary: lineChartData.find(d => d.company === company)[level] || 0
+                        };
+                    }).filter(d => d.salary !== 0);
+
+                    // Draw the line for the company
+                    chartArea4.append("path")
+                        .datum(companyData)
+                        .attr("fill", "none")
+                        .attr("stroke", colorScale(company))
+                        .attr("stroke-width", 2)
+                        .attr("d", lineGenerator);
+
+                    // Add circles at data points
+                    chartArea4.selectAll(`circle-${company}`)
+                        .data(companyData)
+                        .enter()
+                        .append("circle")
+                        .attr("cx", d => xScale(d.level))
+                        .attr("cy", d => yScale(d.salary))
+                        .attr("r", 5)
+                        .attr("fill", colorScale(company));
+                });
+
+                // Add axes
+                chartArea4.append("g")
+                    .attr("transform", `translate(0,${chartHeight4})`)
+                    .call(d3.axisBottom(xScale));
+
+                chartArea4.append("g")
+                    .call(d3.axisLeft(yScale));
+
+                // Add axes labels
+                chartArea4.append("text")
+                    .attr("x", chartWidth4 / 2)
+                    .attr("y", chartHeight4 + 40)
+                    .style("text-anchor", "middle")
+                    .text("Position Level");
+
+                chartArea4.append("text")
+                    .attr("transform", "rotate(-90)")
+                    .attr("y", -50)
+                    .attr("x", -chartHeight4 / 2)
+                    .style("text-anchor", "middle")
+                    .text("Total Yearly Compensation (USD)");
+
+                // Add a legend
+                const legend = svgChart4.append("g")
+                    .attr("id", "legend")
+                    .attr("transform", `translate(${width4 - margin4.right + 10}, ${margin4.top})`);
+
+                companies.forEach((company, i) => {
+                    const legendRow = legend.append("g")
+                        .attr("transform", `translate(0, ${i * 20})`);
+
+                    // Add colored rectangles for each company
+                    legendRow.append("rect")
+                        .attr("width", 10)
+                        .attr("height", 10)
+                        .attr("fill", colorScale(company));
+
+                    // Add text labels for each company
+                    legendRow.append("text")
+                        .attr("x", 20)
+                        .attr("y", 10)
+                        .text(company)
+                        .attr("text-anchor", "start")
+                        .style("alignment-baseline", "middle");
+                });
+            });
+        </script>
+    </p>
+
 
 </body>
 
