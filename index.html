@@ -12,7 +12,6 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://d3js.org/topojson.v2.min.js"></script>
 
-    <!-- TODO: Cite sources! -->
     <style>
         p {
             margin: 50px;
@@ -104,7 +103,8 @@
                     cityJson = JSON.parse(city)
                     const stateName = stateNameId.get(cityJson.stateId)
                     const stats = cityData.find(d => d["City"] === cityJson.city && d["State"] === stateName);
-                    if (!stats) return; // If we cannot find the city stat (likely it is not a US city, then we ignore plotting such salary data)
+                    // If we cannot find the city stat (likely it is not a US city, then we ignore plotting such salary data)
+                    if (!stats) return;
                     const newValue = { ...value, longitude: +stats["Longitude"], latitude: +stats["Latitude"], landArea: stats["Land Area (sq mi)"] }
                     citiesSalaries.set(city, newValue)
                 });
@@ -133,8 +133,9 @@
                     .rangeRound([600, 850]);
 
                 // Define the salary scale (for positioning the legend gradient blocks)
+                // Use the color scale's domain
                 const salaryScale = d3.scaleLinear()
-                    .domain(colorScale.domain())  // Use the color scale's domain
+                    .domain(colorScale.domain())
                     .range([0, legendWidth]);
 
                 // Generate the gradient legend
@@ -180,7 +181,7 @@
                     .remove();
 
                 // Fetch US topojson
-                d3.json("https://d3js.org/us-10m.v1.json").then(handleUsLoaded);
+                d3.json("../us-10m.json").then(handleUsLoaded);
 
                 function handleUsLoaded(us) {
                     svg.append("g")
@@ -232,7 +233,8 @@
 
                         // Generate a distance with bias towards the center (closer to centroid)
                         const maxDrift = salaryEntry.landArea / usSqMiles * 50000;
-                        const distance = Math.random() ** 2 * maxDrift; // Squared to bias toward shorter distances
+                        // Squared to bias toward shorter distances
+                        const distance = Math.random() ** 2 * maxDrift;
 
                         // Calculate the drift in x and y directions using the angle
                         const driftX = Math.cos(angle) * distance;
@@ -474,7 +476,7 @@
 
                 });
 
-                // Calculate the average compensation for each standardized level per company
+                // Calculate the median compensation for each standardized level per company
                 const avgData = d3.rollups(
                     standardizedData,
                     v => d3.median(v, d => d.totalyearlycompensation),
@@ -735,7 +737,7 @@
                     .domain([0, Math.log(max)])
                     .range([0, 25]);
 
-                d3.json("https://d3js.org/us-10m.v1.json").then(handleUsLoaded3);
+                d3.json("../us-10m.json").then(handleUsLoaded3);
 
                 function legendCircles(number) {
 
@@ -1029,13 +1031,19 @@
     </p>
 
     <p style="font-family: 'Raleway', sans-serif;">
-        Sources:
+    <h4 style="font-family: 'Lato', sans-serif; font-weight: bold; font-size: 28px; color: #333;">
+        Sources:</h4>
     <ul>
         <li>Kaggle data set with SWE Salaries and other related data:
             <a
                 href="https://www.kaggle.com/datasets/vyacheslavgalchenko/cs-salaries">https://www.kaggle.com/datasets/vyacheslavgalchenko/cs-salaries</a>
             <a
                 href="https://amcneil36.github.io/programs/WeatherAndDemographicsInformation/">https://amcneil36.github.io/programs/WeatherAndDemographicsInformation/</a>
+        </li>
+        <li> D3 Documentation for relevant functions and resources:
+            <a href="https://devdocs.io/d3/"> https://devdocs.io/d3/
+        </li>
+
         </li>
     </ul>
 
