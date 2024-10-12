@@ -610,8 +610,6 @@
     <p id="chart3">
         <script>
 
-            // TODO: Add legend, change colors, add title, maybe add important cities
-            // TODO: Replace with state_id_name.csv data
             const stateMap = new Map([
                 ["AL", "ALABAMA"],
                 ["AK", "ALASKA"],
@@ -793,7 +791,7 @@
                             .attr("cy", y)
                             .attr("r", sizeScale(value))
                             .attr("fill", "#00C")
-                            .attr("opacity", 1)
+                            .attr("opacity", 0.3)
                     });
 
                     const axisScale = d3.scaleLog()
@@ -1026,8 +1024,19 @@
         We can also see the pay is the highest in the bay area, which might be a way to try and counter the high tax
         rates in that region. We can see the variance between salaries is pretty high even for some of the big companies
         we know
-        which is interesting as we would've thought they'd end up convering at some point, guess money isn't infinite
-        even at the trillion dollar mark!
+        which is interesting as we would've thought they'd end up convering at some point, looks like money isn't
+        infinite even at the trillion dollar mark!
+    </p>
+
+    <p style="font-family: 'Raleway', sans-serif;">
+        Sources:
+    <ul>
+        <li>Kaggle data set with SWE Salaries and other related data: <a
+                href="https://www.kaggle.com/datasets/vyacheslavgalchenko/cs-salaries">https://www.kaggle.com/datasets/vyacheslavgalchenko/cs-salaries</a>
+
+        </li>
+    </ul>
+
     </p>
 
 
